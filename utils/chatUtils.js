@@ -1,4 +1,5 @@
 const Message = require('../models/Message');
+const Chat = require('../models/Chat');
 
 async function sendMessage(chatId, senderId, receiverId, content) {
     const message = new Message({
