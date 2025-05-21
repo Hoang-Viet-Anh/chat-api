@@ -3,6 +3,7 @@ const router = express.Router();
 const Message = require('../models/Message');
 const Chat = require('../models/Chat');
 const User = require('../models/User');
+const ChatParticipant = require('../models/ChatParticipant');
 const { getRandomQuote } = require('../services/randomQuotes');
 const { sendMessage } = require('../utils/chatUtils');
 const intervals = require('../utils/intervals');
@@ -15,6 +16,7 @@ router.post('/send/message', passport.authenticate('jwt', { session: false }),
             let { chatId, content } = req.body;
 
             const chat = await Chat.findById(chatId);
+
             if (!chat) {
                 return res.status(404).json({ message: 'Chat not found' });
             }
@@ -60,6 +62,10 @@ router.get('/automatic/enable', passport.authenticate('jwt', { session: false })
                     !u.googleId && (u._id.toString() !== userId.toString())
                 );
             });
+
+            if (filteredChats.length === 0) {
+                return res.status(404).json({ message: 'No chats found' });
+            }
 
             let randomQuotes = await getRandomQuote(50);
 
@@ -111,6 +117,20 @@ router.get('/', passport.authenticate('jwt', { session: false }),
                 users: userId,
             }).populate('users');
 
+            const chatParticipant = await ChatParticipant.find({ userId });
+            const unreadCounts = await Promise.all(chatParticipant.map(async (participant) => {
+                const count = await Message.countDocuments({
+                    chatId: participant.chatId,
+                    sender: { $ne: userId },
+                    createdAt: { $gt: participant.lastReadAt || new Date(0) }
+                });
+
+                return {
+                    chatId: participant.chatId,
+                    count,
+                };
+            }));
+
             const otherUsers = populatedChats.map(chat =>
                 chat.users.find(user => user._id.toString() !== userId.toString())
             );
@@ -123,6 +143,7 @@ router.get('/', passport.authenticate('jwt', { session: false }),
             res.json({
                 chats: chats,
                 users: otherUsers,
+                unreadCounts,
             });
         } catch (error) {
             console.log(error);
@@ -136,18 +157,25 @@ router.get('/:chatId', passport.authenticate('jwt', { session: false }),
             const userId = req.user.id;
             const { chatId } = req.params;
             const chat = await Chat.findById(chatId);
+
             if (!chat) {
                 return res.status(404).json({ message: 'Chat not found' });
             }
             if (!chat.users.some(user => user._id.toString() === userId.toString())) {
                 return res.status(403).json({ message: 'You are not allowed to access this chat' });
             }
+
             const interlocutorId = chat.users.find(user => user._id.toString() !== userId.toString());
             const interlocutor = await User.findById(interlocutorId);
 
             const messages = await Message.find({ chatId });
+            const chatParticipant = await ChatParticipant.findOne({ chatId, userId });
+            if (chatParticipant) {
+                chatParticipant.lastReadAt = new Date(Date.now());
+                await chatParticipant.save();
+            }
             return res.json({
-                messages,
+                messages: messages.reverse(),
                 user: interlocutor,
             });
         } catch (error) {
@@ -175,7 +203,12 @@ router.get('/create/:userId', passport.authenticate('jwt', { session: false }),
                 return res.status(400).json({ message: 'The receiver must be a registered user' });
             }
             const chat = new Chat({ users: [userId, receiverId] });
+            const chatParticipant = new ChatParticipant({ userId, chatId: chat._id });
+            const chatParticipant2 = new ChatParticipant({ userId: receiverId, chatId: chat._id });
+
             await chat.save();
+            await chatParticipant.save();
+            await chatParticipant2.save();
             res.status(200).json({ message: 'Chat created successfully' });
         } catch (error) {
             console.log(error);
@@ -189,12 +222,24 @@ router.delete('/:chatId', passport.authenticate('jwt', { session: false }),
             const userId = req.user.id;
 
             const { chatId } = req.params;
-            const chat = await Chat.findByIdAndDelete(chatId);
-            if (chat) {
+            const chat = await Chat.findById(chatId);
+
+            if (!chat) {
+                return res.status(404).json({ message: 'Chat not found' });
+            }
+            if (!chat.users.some(user => user._id.toString() === userId.toString())) {
+                return res.status(403).json({ message: 'You are not allowed to access this chat' });
+            }
+
+            const deletedChat = await Chat.findByIdAndDelete(chatId);
+            if (deletedChat) {
                 await Message.deleteMany({
                     chatId,
                 });
-                const interlocutorId = chat.users.find(user => user._id.toString() !== userId.toString());
+                await ChatParticipant.deleteMany({
+                    chatId,
+                });
+                const interlocutorId = deletedChat.users.find(user => user._id.toString() !== userId.toString());
                 const interlocutor = await User.findById(interlocutorId);
                 if (!interlocutor.googleId) {
                     await User.findByIdAndDelete(interlocutorId);

@@ -1,5 +1,4 @@
 const Message = require('../models/Message');
-const Chat = require('../models/Chat');
 
 async function sendMessage(chatId, senderId, receiverId, content) {
     const message = new Message({
@@ -12,11 +11,11 @@ async function sendMessage(chatId, senderId, receiverId, content) {
     await Chat.findByIdAndUpdate(chatId, {
         lastMessage: {
             content,
-            timestamp: message.timestamp,
+            timestamp: message.createdAt,
         }
     });
 
     global.io.to(receiverId.toString()).emit('newMessage', message);
 }
 
-module.exports = { sendMessage };
+module.exports = { sendMessage};

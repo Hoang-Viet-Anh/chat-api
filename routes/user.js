@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
-const Message = require('../models/Message');
 const Chat = require('../models/Chat');
+const ChatParticipant = require('../models/ChatParticipant');
 const passport = require('../auth/passport');
 const { cookieProps } = require('../auth/jwtStrategy');
 const jwt = require('jsonwebtoken');
@@ -56,9 +56,11 @@ router.post('/add', passport.authenticate('jwt', { session: false }),
             const newUser = new User({ firstName, lastName });
             newUser.imageUrl = `${process.env.AVATAR_URL}${newUser._id}`;
             const chat = new Chat({ users: [newUser._id, userId] });
+            const chatParticipant = new ChatParticipant({ userId, chatId: chat._id });
 
             await newUser.save();
             await chat.save();
+            await chatParticipant.save();
 
             res.json(newUser);
         } catch (error) {

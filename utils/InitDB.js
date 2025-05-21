@@ -1,5 +1,6 @@
 const Chat = require('../models/Chat');
 const User = require('../models/User');
+const ChatParticipant = require('../models/ChatParticipant');
 
 const testUsers = [
     {
@@ -43,8 +44,11 @@ async function initDB() {
             const user = new User(testUsers[i]);
             user.imageUrl = `${process.env.AVATAR_URL}${user._id}`;
             const chat = new Chat({ users: [user._id, anonymousUser._id] });
+            const chatParticipant = new ChatParticipant({ userId: anonymousUser._id, chatId: chat._id });
+
             await user.save();
             await chat.save();
+            await chatParticipant.save();
         }
     } catch (error) {
         console.log(error);
