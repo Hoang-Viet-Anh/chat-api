@@ -1,5 +1,5 @@
 const { Server } = require("socket.io");
-const intervals = require('./intervals');
+const intervals = require('../utils/intervals');
 const jwt = require('jsonwebtoken');
 
 function startSocket(server) {

@@ -6,8 +6,8 @@ const cookieParser = require('cookie-parser');
 const chatRoutes = require('./routes/chat');
 const userRoutes = require('./routes/user');
 const authRoutes = require('./routes/auth');
-const { startSocket } = require('./utils/socket');
-const { initDB } = require('./utils/InitDB');
+const { startSocket } = require('./sockets/socket');
+const { initDB } = require('./config/InitDB');
 const http = require('http');
 const passport = require('./auth/passport');
 
