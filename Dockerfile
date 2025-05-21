@@ -4,9 +4,6 @@ FROM node:20-alpine
 # Set working directory
 WORKDIR /app
 
-# Set DNS environment variable for Node.js
-ENV NODE_OPTIONS="--dns-server=8.8.8.8 --dns-server=1.1.1.1"
-
 # Copy package.json and package-lock.json if available
 COPY package*.json ./
 
