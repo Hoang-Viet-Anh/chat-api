@@ -4,7 +4,7 @@ const Message = require('../models/Message');
 const Chat = require('../models/Chat');
 const User = require('../models/User');
 const ChatParticipant = require('../models/ChatParticipant');
-const { getRandomQuote } = require('../services/randomQuotes');
+const { getRandomQuote, getMultipleRandomQuotes } = require('../services/randomQuotes');
 const { sendMessage } = require('../utils/chatUtils');
 const intervals = require('../utils/intervals');
 const passport = require('../auth/passport');
@@ -31,10 +31,9 @@ router.post('/send/message', passport.authenticate('jwt', { session: false }),
 
             if (!receiver.googleId) {
                 setTimeout(async () => {
-                    const randomQuotes = await getRandomQuote(1);
-                    const quote = randomQuotes[0];
+                    const randomQuote = await getRandomQuote();
 
-                    await sendMessage(chat._id, receiverId, userId, quote);
+                    await sendMessage(chat._id, receiverId, userId, randomQuote);
                 }, 3000);
             }
 
@@ -67,11 +66,11 @@ router.get('/automatic/enable', passport.authenticate('jwt', { session: false })
                 return res.status(404).json({ message: 'No chats found' });
             }
 
-            let randomQuotes = await getRandomQuote(50);
+            let randomQuotes = await getMultipleRandomQuotes(50);
 
             intervals.set(userId.toString(), setInterval(async () => {
                 if (randomQuotes.length === 0) {
-                    randomQuotes = await getRandomQuote(50);
+                    randomQuotes = await getMultipleRandomQuotes(50);
                 }
 
                 const chat = filteredChats[Math.floor(Math.random() * filteredChats.length)];
