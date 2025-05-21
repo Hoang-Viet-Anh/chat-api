@@ -14,7 +14,7 @@ RUN npm install --omit=dev
 COPY . .
 
 # Expose the port your app listens on (change if not 3000)
-EXPOSE 5000
+EXPOSE 3000
 
 # Define default start command
 CMD ["node", "app.js"]
