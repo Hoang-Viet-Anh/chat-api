@@ -5,8 +5,15 @@ async function getRandomQuote() {
     try {
         const QUOTES_API = process.env.QUOTES_API;
         const response = await axios.get(`${QUOTES_API}/random`);
-        const quotes = response.data.quote.content;
-        return quotes;
+        if (response.status !== 200) {
+            return "A lie gets halfway around the world before the truth has a chance to get its pants on.";
+        }
+        const data = response.data;
+        if (data && data.quote && data.quote.content) {
+            const quotes = response.data.quote.content;
+            return quotes;
+        }
+        return "A lie gets halfway around the world before the truth has a chance to get its pants on.";
     } catch (error) {
         console.log(error);
         throw new Error('Error fetching random quote');
